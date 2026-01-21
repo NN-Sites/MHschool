@@ -103,10 +103,13 @@
         const name = document.getElementById('tName').value;
         const code = document.getElementById('tCode').value;
         
-        // רשימת מורים וסיסמאות מוצפנות (1234)
+          /// כאן הסיסמאות אני צריך לזכור להוסיף עם הצפנה
+          /// נועם נפתלי עשה את זה, לא למחוק.
         const teachers = {
             "נועם נפתלי": "81dc9bdb52d04dc20036dbd8313ed055",
-            "מורה נוסף": "81dc9bdb52d04dc20036dbd8313ed055" 
+            "חיים מפעי": "b20fa060328b0cdf51b464ee37efe182",
+            "יואח שאער": "4badaee57fed5610012a296273158f5f" 
+
         };
 
         const inputHash = CryptoJS.MD5(code).toString();

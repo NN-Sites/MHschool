@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מעיין חי - ניהול מורה</title>
+    <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root { --p: #1a237e; --s: #4caf50; }
+        body { font-family: 'Assistant', sans-serif; background: #f0f2f5; margin: 0; padding: 15px; }
+        .card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        h2, h3 { color: var(--p); margin-top: 0; }
+        input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        .btn-send { background: var(--p); color: white; border: none; padding: 12px; width: 100%; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { text-align: right; border-bottom: 2px solid #eee; padding: 10px; font-size: 0.9rem; color: #666; }
+        td { padding: 10px; border-bottom: 1px solid #f9f9f9; font-size: 0.9rem; }
+        .clear-btn { color: red; cursor: pointer; font-size: 0.8rem; background: none; border: none; }
+    </style>
+</head>
+<body>
+
+<div style="display:flex; justify-content:space-between;">
+    <h2>שלום המורה נועם 👨‍🏫</h2>
+    <button onclick="location.href='index.html'">דף תלמיד</button>
+</div>
+
+<div class="card">
+    <h3>➕ פרסום משימה</h3>
+    <input type="text" id="subject" placeholder="מקצוע">
+    <input type="text" id="content" placeholder="תיאור המשימה">
+    <button class="btn-send" onclick="addNewTask()">שלח לכל התלמידים</button>
+</div>
+
+<div class="card">
+    <div style="display:flex; justify-content:space-between;">
+        <h3>📊 דיווחי ביצוע (זמן אמת)</h3>
+        <button class="clear-btn" onclick="clearData()">נקה הכל</button>
+    </div>
+    <table>
+        <thead>
+            <tr>
+                <th>תלמיד</th>
+                <th>משימה</th>
+                <th>שעה</th>
+            </tr>
+        </thead>
+        <tbody id="report-table"></tbody>
+    </table>
+</div>
+
+<script>
+    const channel = new BroadcastChannel('maayan_chai_system');
+
+    function addNewTask() {
+        const subject = document.getElementById('subject').value;
+        const content = document.getElementById('content').value;
+        if(!subject || !content) return alert("מלא פרטי משימה");
+
+        let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+        tasks.unshift({ subject, content });
+        localStorage.setItem('tasks', JSON.stringify(tasks));
+
+        channel.postMessage({ type: 'NEW_TASK' });
+        alert("המשימה פורסמה!");
+        document.getElementById('subject').value = '';
+        document.getElementById('content').value = '';
+    }
+
+    function loadReports() {
+        const reports = JSON.parse(localStorage.getItem('reports')) || [];
+        const table = document.getElementById('report-table');
+        table.innerHTML = reports.reverse().map(r => `
+            <tr>
+                <td><b>${r.student}</b></td>
+                <td>${r.subject}</td>
+                <td>${r.time}</td>
+            </tr>
+        `).join('');
+    }
+
+    function clearData() {
+        if(confirm("למחוק את כל המשימות והדיווחים?")) {
+            localStorage.clear();
+            channel.postMessage({ type: 'NEW_TASK' });
+            location.reload();
+        }
+    }
+
+    channel.onmessage = (e) => { if(e.data.type === 'REPORT_SUBMITTED') loadReports(); };
+    window.onload = loadReports;
+</script>
+</body>
+</html>

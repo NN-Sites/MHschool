@@ -54,7 +54,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
 <script>
-    // הגנת גישה - אם לא מורה, תחזור לדף הבית
     if (sessionStorage.getItem('isTeacher') !== 'true') {
         window.location.href = 'index.html';
     }

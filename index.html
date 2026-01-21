@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>מעיין חי - תלמידים</title>
     <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         :root { --p: #1a237e; --s: #00bcd4; --bg: #f4f7f9; --success: #2ecc71; }
         body { font-family: 'Assistant', sans-serif; background: var(--bg); margin: 0; padding-bottom: 50px; }
@@ -16,19 +17,11 @@
         .btn { width: 100%; padding: 12px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; margin-top: 10px; transition: 0.3s; }
         .btn-done { background: var(--success); color: white; }
         .login-link { text-align: center; margin-top: 30px; color: var(--p); cursor: pointer; text-decoration: underline; }
-        
         #login-modal { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: white; padding: 25px; border-radius: 20px; width: 85%; max-width: 320px; }
         input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
-
-        @keyframes fadeOut {
-            from { opacity: 1; transform: scale(1); }
-            to { opacity: 0; transform: scale(0.9); }
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
+        @keyframes fadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.9); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
@@ -41,7 +34,6 @@
 <div class="container">
     <h2 id="no-tasks" style="text-align: center; color: #999; margin-top: 50px; display: none;">אין שיעורי בית כרגע... 🎉</h2>
     <div id="tasks-container"></div>
-    
     <div class="login-link" onclick="document.getElementById('login-modal').style.display='flex'">כניסת מורה</div>
 </div>
 
@@ -55,74 +47,78 @@
     </div>
 </div>
 
-<script>
-    const channel = new BroadcastChannel('maayan_chai_system');
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
-    function loadTasks() {
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyAyeN8movOwjUFgRB-cvqB8dhzASPfIooc",
+        authDomain: "mhschool-7690f.firebaseapp.com",
+        databaseURL: "https://mhschool-7690f-default-rtdb.firebaseio.com",
+        projectId: "mhschool-7690f",
+        storageBucket: "mhschool-7690f.firebasestorage.app",
+        messagingSenderId: "458018293803",
+        appId: "1:458018293803:web:ae4e0206b1e4acb165c26e"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    database.ref('tasks').on('value', (snapshot) => {
         const container = document.getElementById('tasks-container');
-        const tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-        
-        if (tasks.length === 0) {
+        const tasksObj = snapshot.val();
+        if (!tasksObj) {
             document.getElementById('no-tasks').style.display = 'block';
             container.innerHTML = '';
             return;
         }
-        
         document.getElementById('no-tasks').style.display = 'none';
-        container.innerHTML = tasks.map((task, index) => `
-            <div class="card" id="task-card-${index}">
+        const tasksArray = Object.entries(tasksObj);
+        container.innerHTML = tasksArray.reverse().map(([id, task]) => `
+            <div class="card" id="task-${id}">
                 <span class="task-title">${task.subject}</span>
                 <span class="task-desc">${task.content}</span>
                 <div style="display: flex; align-items: center; gap: 10px;">
-                    <input type="text" id="student-${index}" placeholder="שמך המלא" style="margin:0; flex: 2;">
-                    <button class="btn btn-done" style="margin:0; flex: 1;" onclick="markAsDone(${index})">סיימתי!</button>
+                    <input type="text" id="input-${id}" placeholder="שמך המלא" style="margin:0; flex: 2;">
+                    <button class="btn btn-done" style="margin:0; flex: 1;" onclick="markAsDone('${id}', '${task.subject}')">סיימתי!</button>
                 </div>
             </div>
         `).join('');
-    }
+    });
 
-    function markAsDone(taskIndex) {
-        const studentInput = document.getElementById(`student-${taskIndex}`);
-        const studentName = studentInput.value;
-        
-        if (!studentName) return alert("אנא הכנס שם לפני האישור");
-
-        const tasks = JSON.parse(localStorage.getItem('tasks'));
-        const report = {
+    function markAsDone(taskId, subject) {
+        const studentName = document.getElementById(`input-${taskId}`).value;
+        if (!studentName) return alert("אנא הכנס שם");
+        database.ref('reports').push({
             student: studentName,
-            subject: tasks[taskIndex].subject,
+            subject: subject,
             time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
-        };
-
-        let reports = JSON.parse(localStorage.getItem('reports')) || [];
-        reports.push(report);
-        localStorage.setItem('reports', JSON.stringify(reports));
-
-        channel.postMessage({ type: 'REPORT_SUBMITTED', report });
-
-        const card = document.getElementById(`task-card-${taskIndex}`);
+        });
+        const card = document.getElementById(`task-${taskId}`);
         card.style.animation = "fadeOut 0.5s forwards";
-        
-        setTimeout(() => {
-            card.remove();
-            const remainingCards = document.querySelectorAll('.card');
-            if (remainingCards.length === 0) {
-                document.getElementById('no-tasks').style.display = 'block';
-            }
-        }, 500);
-
-        alert("כל הכבוד " + studentName + "! הדיווח נשלח למורה.");
+        setTimeout(() => card.remove(), 500);
     }
 
     function doLogin() {
-        if(document.getElementById('tName').value === "הרב חיים מפעי" && document.getElementById('tCode').value === "8114") {
+        const name = document.getElementById('tName').value;
+        const code = document.getElementById('tCode').value;
+        
+        // רשימת מורים וסיסמאות מוצפנות (1234)
+        const teachers = {
+            "נועם נפתלי": "81dc9bdb52d04dc20036dbd8313ed055",
+            "מורה נוסף": "81dc9bdb52d04dc20036dbd8313ed055" 
+        };
+
+        const inputHash = CryptoJS.MD5(code).toString();
+
+        if (teachers[name] && teachers[name] === inputHash) {
+            sessionStorage.setItem('isTeacher', 'true');
+            sessionStorage.setItem('teacherName', name);
             window.location.href = 'teacher.html';
-        } else { alert("פרטים שגויים"); }
+        } else {
+            alert("פרטים שגויים");
+        }
     }
-
-    channel.onmessage = (e) => { if(e.data.type === 'NEW_TASK') loadTasks(); };
-
-    window.onload = loadTasks;
 </script>
 </body>
 </html>
